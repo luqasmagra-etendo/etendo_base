@@ -1,5 +1,7 @@
 # Etendo QA pipeline
 
+> Survey of Etendo's current Jenkins/Kubernetes CI: [`etendo-ci-survey.md`](etendo-ci-survey.md) · Jira INT-7470
+
 A tiered test pipeline for Etendo with an AI agent that triages failures. The AI layer is itself
 measured with evals that have verified ground truth.
 
