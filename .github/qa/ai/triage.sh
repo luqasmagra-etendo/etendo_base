@@ -22,6 +22,7 @@ if [ "$diff" = "-" ] || [ ! -s "$diff" ]; then : > "$work/change.diff"; else cp 
 prompt="$(sed -e "s#{{FAILURES}}#build/qa-ai/failures.json#g" -e "s#{{DIFF}}#build/qa-ai/change.diff#g" "$here/triage-prompt.md")"
 
 cd "$root"
+rc=0
 claude -p "$prompt" \
   --output-format json \
   --json-schema "$(cat "$here/triage-schema.json")" \
@@ -29,6 +30,21 @@ claude -p "$prompt" \
   --permission-mode dontAsk \
   --max-turns "${QA_AI_MAX_TURNS:-30}" \
   --model "${QA_AI_MODEL:-sonnet}" \
-  > "$out/raw.json"
+  > "$out/raw.json" || rc=$?
+
+if [ "$rc" -ne 0 ]; then
+  # The JSON result carries the reason (auth, quota, max turns...); show it instead of failing silently.
+  echo "claude -p exited with code $rc. Reason reported by Claude Code:" >&2
+  python3 -c "
+import json,sys
+try:
+    d=json.load(open(sys.argv[1]))
+    print(' subtype:', d.get('subtype'), '| is_error:', d.get('is_error'), '| turns:', d.get('num_turns'))
+    print(' result:', str(d.get('result') or d.get('error') or '')[:800])
+except Exception:
+    print(' (no JSON) first output bytes:', open(sys.argv[1]).read()[:800])
+" "$out/raw.json" >&2
+  exit "$rc"
+fi
 
 python3 "$here/render-triage.py" "$out/raw.json" "$out"
