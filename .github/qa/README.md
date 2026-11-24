@@ -103,6 +103,19 @@ It stays as an open capability target, and the answer is not hard-coded into the
 changing the grader. That is how a grader bug was found: the grader demanded fully-qualified
 test names, which made the first run score 0/5.
 
+## Validated on GitHub Actions (2026-11-24, fork luqasmagra-etendo/etendo_base)
+
+| Run | Result |
+|---|---|
+| Regression on push to main | green: 4788 tests, build 5m53s + 4 shards 4m28s–5m49s, ~12 min total |
+| PR, docs-only change | `risk:low`, smoke green (154 tests, ~7 min), sticky comment |
+| PR, Tomcat-bound test added to smoke | `risk:medium`, smoke red; AI triage: `needs_server`, caused by the change, high confidence ($0.17) |
+| Canary (manual) | injected bug turned the gate red; AI blamed the change and explained the off-by-one ($0.10) |
+
+Issues found by those runs and fixed: the shard archive lacked `WebContent` (test mocks read
+`source.path/WebContent`; Jasper tests failed); newer npm blocks the Claude Code postinstall unless
+allowed; `triage.sh` hid the Claude Code error; the canary passed when the AI produced no verdict.
+
 ## Local use
 
 ```bash
@@ -122,4 +135,11 @@ the `qa-triager` subagent.
 | `ETENDO_GITHUB_USER`, `ETENDO_GITHUB_TOKEN` | PAT with `read:packages` for Etendo's GitHub packages |
 | `ETENDO_NEXUS_USER`, `ETENDO_NEXUS_PASSWORD` | optional; not yet confirmed whether they are required |
 | `ANTHROPIC_API_KEY` | AI triage, evals and canary, billed to the API account |
-| `CLAUDE_CODE_OAUTH_TOKEN` | Alternative to the API key: a subscription token (Pro/Max/Team/Enterprise) from `claude setup-token`, valid one year. If both are set, the API key wins. Never run the scripts with `--bare`, which ignores this token. Without either secret, the AI steps are skipped |
+| `CLAUDE_CODE_OAUTH_TOKEN` | **Where a `claude setup-token` value goes** (`sk-ant-oat…`; putting it in `ANTHROPIC_API_KEY` fails). Alternative to the API key: a subscription token (Pro/Max/Team/Enterprise) from `claude setup-token`, valid one year. If both are set, the API key wins. Never run the scripts with `--bare`, which ignores this token. Without either secret, the AI steps are skipped |
+
+## Setting it up on a fork
+
+- Enable **Issues** (Settings → General): forks ship with them off, and the tracking/flaky/canary issues fail without them.
+- When opening a PR from the fork's own branches, check that the **base repository** is the fork. GitHub offers the upstream repository by default.
+- The "Update branch" button only appears with *Always suggest updating pull request branches* enabled. Without it, merge `main` into the branch and push.
+- `Git Police` (Etendo's own workflow) fails on forks: it needs Etendo's bot and secrets.
