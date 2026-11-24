@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Canary verdict: after a known bug is injected, CI must go red and (if the AI ran) blame the change.
 
-Usage: canary-check.py FAILURES_JSON [TRIAGE_JSON]
+Usage: canary-check.py FAILURES_JSON [TRIAGE_JSON]   (QA_REQUIRE_AI=true makes the AI verdict mandatory)
 Exit 0 = the pipeline still detects bugs. Exit 1 = it went blind (e.g. tests skipped, selector broken).
 """
 import json, os, sys
@@ -10,7 +10,10 @@ TARGET = "PasswordStrengthCheckerTest"
 fails = [f for f in json.load(open(sys.argv[1]))["failures"] if f["class"].endswith(TARGET)]
 problems = [] if fails else [f"no {TARGET} failure: the injected bug went undetected"]
 
-if len(sys.argv) > 2 and os.path.exists(sys.argv[2]):
+ai_file = sys.argv[2] if len(sys.argv) > 2 else ""
+if os.environ.get("QA_REQUIRE_AI") == "true" and not os.path.exists(ai_file):
+    problems.append("AI credentials are set but the triage produced no verdict (see the AI triage step log)")
+if ai_file and os.path.exists(ai_file):
     verdicts = {".".join(v["test"].split(".")[-2:]): v for v in json.load(open(sys.argv[2]))["failures"]}
     for f in fails:
         v = verdicts.get(f"{TARGET}.{f['test']}")

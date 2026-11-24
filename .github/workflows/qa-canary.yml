@@ -64,6 +64,8 @@ jobs:
           cat build/qa/triage.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verdict — did CI and the AI catch it?
+        env:
+          QA_REQUIRE_AI: ${{ env.HAS_AI }}
         run: python3 .github/qa/canary-check.py build/qa/failures.json build/qa/triage.json | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Open issue if the pipeline went blind
